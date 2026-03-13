@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tesla Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background-color:#1a1a1a;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Crect width='12' height='12' fill='%23171717'/%3E%3Cpath fill='%23222' d='M0 0h2v2H0zm4 4h2v2H4zm8 8h2v2h-2zM6 6h2v2H6zm-4 8h2v2H2z'/%3E%3C/svg%3E");
+  font-family:ui-monospace,Menlo,Monaco,'Cascadia Code',monospace;
+  color:#e0e0e0;
+  padding:16px;
+  min-height:100vh;
+}
+.dash{max-width:900px;margin:0 auto}
+
+/* Clock */
+.clock{text-align:center;padding:20px 0 10px}
+.clock-time{
+  font-size:5rem;
+  font-weight:700;
+  color:#fff;
+  text-shadow:0 0 20px rgba(52,152,219,.4),0 0 40px rgba(52,152,219,.1);
+  letter-spacing:4px;
+  line-height:1;
+}
+.clock-date{font-size:1rem;color:#888;margin-top:4px}
+
+/* Sections */
+.section{margin:20px 0}
+.section-title{
+  font-size:.85rem;
+  text-transform:uppercase;
+  letter-spacing:2px;
+  color:#3498db;
+  border-bottom:1px solid #2c3e50;
+  padding-bottom:6px;
+  margin-bottom:12px;
+}
+
+/* Cards */
+.card{
+  background:rgba(20,20,20,.9);
+  border:1px solid #2c3e50;
+  border-radius:8px;
+  padding:14px;
+  margin-bottom:10px;
+}
+
+/* Weather grid */
+.weather-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.weather-city{text-align:center}
+.weather-city h3{color:#fff;font-size:1rem;margin-bottom:8px}
+.weather-temp{font-size:2.2rem;color:#fff;font-weight:700}
+.weather-desc{font-size:.8rem;color:#aaa;margin:4px 0}
+.weather-detail{font-size:.75rem;color:#666}
+.forecast-row{display:flex;justify-content:center;gap:12px;margin-top:10px}
+.forecast-day{text-align:center;font-size:.7rem;color:#888}
+.forecast-day .temp{color:#ccc;font-size:.8rem}
+.weather-icon{font-size:1.8rem;line-height:1}
+
+/* Ferry */
+.ferry-table{width:100%;border-collapse:collapse}
+.ferry-table th{
+  background:#2c3e50;
+  padding:8px;
+  font-size:.85rem;
+  text-align:center;
+  color:#fff;
+}
+.ferry-table td{
+  padding:8px;
+  text-align:center;
+  border-bottom:1px solid #2a2a2a;
+  font-size:1rem;
+}
+.ferry-table tr:last-child td{border-bottom:none}
+.ferry-toggle{
+  display:block;
+  text-align:center;
+  color:#3498db;
+  font-size:.8rem;
+  margin-top:8px;
+  cursor:pointer;
+  text-decoration:none;
+}
+.ferry-toggle:hover{color:#5dade2}
+.ferry-full{display:none}
+.ferry-full.show{display:table}
+.ferry-link{
+  display:block;
+  text-align:center;
+  margin-top:8px;
+  font-size:.75rem;
+}
+.ferry-link a{color:#6900ff;text-decoration:none}
+.ferry-link a:hover{color:#5dade2}
+
+/* HAK */
+.hak-summary{font-size:.85rem;line-height:1.6;color:#ccc}
+.hak-details{display:none;margin-top:10px;font-size:.8rem;color:#aaa;line-height:1.5;white-space:pre-line}
+.hak-details.show{display:block}
+.hak-toggle{
+  color:#3498db;font-size:.8rem;cursor:pointer;
+  text-decoration:none;display:inline-block;margin-top:8px;
+}
+.hak-toggle:hover{color:#5dade2}
+.hak-meta{font-size:.7rem;color:#555;margin-top:8px}
+.hak-meta a{color:#6900ff;text-decoration:none}
+
+/* Quick links */
+.links-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+  gap:8px;
+}
+.link-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:12px 8px;
+  background:#1e1e1e;
+  border:1px solid #333;
+  border-radius:8px;
+  color:#e0e0e0;
+  text-decoration:none;
+  font-family:inherit;
+  font-size:.8rem;
+  transition:border-color .2s,background .2s;
+  text-align:center;
+}
+.link-btn:hover{border-color:#3498db;background:#252525}
+.link-btn:active{background:#3498db;color:#fff}
+.link-btn .ico{font-size:1.1rem}
+.link-group-label{
+  font-size:.65rem;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  color:#555;
+  grid-column:1/-1;
+  padding-top:6px;
+}
+.link-group-label:first-child{padding-top:0}
+
+/* Scanline overlay */
+body::after{
+  content:'';
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background:repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,.03) 2px,
+    rgba(0,0,0,.03) 4px
+  );
+  pointer-events:none;
+  z-index:9999;
+}
+
+/* Loading */
+.loading{color:#555;font-size:.8rem;text-align:center;padding:20px}
+
+/* Responsive */
+@media(max-width:600px){
+  .clock-time{font-size:3.5rem}
+  .weather-grid{grid-template-columns:1fr}
+  .links-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+  body{padding:10px}
+}
+</style>
+</head>
+<body>
+<div class="dash">
+
+  <!-- Clock -->
+  <div class="clock">
+    <div class="clock-time" id="clock">--:--</div>
+    <div class="clock-date" id="date"></div>
+  </div>
+
+  <!-- Weather -->
+  <div class="section">
+    <div class="section-title">Vrijeme</div>
+    <div class="weather-grid">
+      <div class="card weather-city" id="weather-zagreb">
+        <h3>Zagreb</h3>
+        <div class="loading">Ucitavanje...</div>
+      </div>
+      <div class="card weather-city" id="weather-rab">
+        <h3>Rab</h3>
+        <div class="loading">Ucitavanje...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ferry -->
+  <div class="section">
+    <div class="section-title">Trajekt Stinica ↔ Rab</div>
+    <div class="card">
+      <table class="ferry-table" id="ferryNext">
+        <thead><tr><th>Iz Stinice</th><th>Sa Misnjaka</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <a class="ferry-toggle" onclick="toggleFerry()">Cijeli raspored ▾</a>
+      <table class="ferry-table ferry-full" id="ferryFull">
+        <thead><tr><th>Iz Stinice</th><th>Sa Misnjaka</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="ferry-link"><a href="https://stanwrit.es/trajekt_rab/" target="_blank">Kamere i vjetar →</a></div>
+    </div>
+  </div>
+
+  <!-- HAK Road Conditions -->
+  <div class="section">
+    <div class="section-title">Stanje na cestama</div>
+    <div class="card">
+      <div class="hak-summary" id="hakSummary"><span class="loading">Ucitavanje...</span></div>
+      <div class="hak-details" id="hakDetails"></div>
+      <a class="hak-toggle" id="hakToggle" onclick="toggleHak()" style="display:none">Vise detalja ▾</a>
+      <div class="hak-meta" id="hakMeta"></div>
+    </div>
+  </div>
+
+  <!-- Quick Links -->
+  <div class="section">
+    <div class="section-title">Brzi pristup</div>
+    <div class="links-grid">
+      <div class="link-group-label">Navigacija</div>
+      <a class="link-btn" href="https://maps.google.com" target="_blank"><span class="ico">🗺</span> Maps</a>
+      <a class="link-btn" href="https://www.waze.com/live-map" target="_blank"><span class="ico">🛣</span> Waze</a>
+
+      <div class="link-group-label">Glazba</div>
+      <a class="link-btn" href="https://open.spotify.com" target="_blank"><span class="ico">🎵</span> Spotify</a>
+      <a class="link-btn" href="https://music.youtube.com" target="_blank"><span class="ico">🎧</span> YT Music</a>
+      <a class="link-btn" href="https://youtube.com" target="_blank"><span class="ico">▶</span> YouTube</a>
+
+      <div class="link-group-label">Tesla</div>
+      <a class="link-btn" href="https://www.tesla.com/findus?type=supercharger" target="_blank"><span class="ico">⚡</span> Supercharger</a>
+      <a class="link-btn" href="https://abetterrouteplanner.com" target="_blank"><span class="ico">🔋</span> ABRP</a>
+
+      <div class="link-group-label">Vijesti</div>
+      <a class="link-btn" href="https://www.index.hr" target="_blank"><span class="ico">📰</span> Index.hr</a>
+      <a class="link-btn" href="https://www.jutarnji.hr" target="_blank"><span class="ico">📰</span> Jutarnji</a>
+      <a class="link-btn" href="https://www.24sata.hr" target="_blank"><span class="ico">📰</span> 24sata</a>
+
+      <div class="link-group-label">Ostalo</div>
+      <a class="link-btn" href="https://hak.hr/info/stanje-na-cestama/" target="_blank"><span class="ico">🚗</span> HAK</a>
+      <a class="link-btn" href="https://stanwrit.es/trajekt_rab/" target="_blank"><span class="ico">⛴</span> Trajekt</a>
+      <a class="link-btn" href="https://www.windy.com/44.750/14.750?wind,44.750,14.750,9" target="_blank"><span class="ico">💨</span> Windy</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Clock ──
+function updateClock(){
+  const now=new Date();
+  document.getElementById('clock').textContent=
+    now.toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'});
+  const days=['Nedjelja','Ponedjeljak','Utorak','Srijeda','Cetvrtak','Petak','Subota'];
+  const months=['sijecnja','veljace','ozujka','travnja','svibnja','lipnja',
+    'srpnja','kolovoza','rujna','listopada','studenoga','prosinca'];
+  document.getElementById('date').textContent=
+    `${days[now.getDay()]}, ${now.getDate()}. ${months[now.getMonth()]} ${now.getFullYear()}.`;
+}
+setInterval(updateClock,1000);
+updateClock();
+
+// ── Weather (yr.no via proxy) ──
+const CITIES={
+  zagreb:{lat:45.8131,lon:15.9775},
+  rab:{lat:44.7561,lon:14.7603}
+};
+
+// Weather symbol code to emoji mapping
+function weatherIcon(code){
+  if(!code)return'🌡';
+  const c=String(code).replace(/_.*$/,'');
+  const map={
+    '1':'☀','2':'🌤','3':'⛅','4':'☁',
+    '5':'🌦','6':'🌧','7':'🌨','8':'🌧','9':'🌧',
+    '10':'🌧','11':'⛈','12':'🌨','13':'🌨','14':'⛈',
+    '15':'🌫','22':'⛈','23':'⛈','24':'🌧','25':'🌨',
+    '26':'🌨','27':'🌧','28':'🌨','29':'🌨','30':'🌧',
+    '31':'🌨','32':'🌨','33':'🌧','34':'🌨',
+    '40':'🌧','41':'🌧','42':'🌨','43':'🌨',
+    '44':'🌨','45':'🌧','46':'🌧','47':'🌨',
+    '48':'🌨','49':'🌨','50':'🌧'
+  };
+  return map[c]||'🌡';
+}
+
+function renderWeather(id,data){
+  const el=document.getElementById(id);
+  if(!data||!data.properties){
+    el.innerHTML=`<h3>${id==='weather-zagreb'?'Zagreb':'Rab'}</h3><div class="loading">Nedostupno</div>`;
+    return;
+  }
+  const ts=data.properties.timeseries;
+  const now=ts[0];
+  const inst=now.data.instant.details;
+  const sym=now.data.next_1_hours?.summary?.symbol_code||
+            now.data.next_6_hours?.summary?.symbol_code||'';
+  const temp=Math.round(inst.air_temperature);
+  const wind=Math.round(inst.wind_speed*3.6); // m/s to km/h
+  const name=id==='weather-zagreb'?'Zagreb':'Rab';
+
+  // 3-day forecast (pick noon entries)
+  let forecast=[];
+  const today=new Date().toISOString().slice(0,10);
+  const seen=new Set();
+  for(const t of ts){
+    const d=t.time.slice(0,10);
+    const h=parseInt(t.time.slice(11,13));
+    if(d===today||seen.has(d))continue;
+    if(h>=11&&h<=13&&forecast.length<3){
+      seen.add(d);
+      const s=t.data.next_6_hours?.summary?.symbol_code||t.data.next_1_hours?.summary?.symbol_code||'';
+      const hi=t.data.next_6_hours?.details?.air_temperature_max||t.data.instant.details.air_temperature;
+      const lo=t.data.next_6_hours?.details?.air_temperature_min||hi;
+      const dayName=new Date(d).toLocaleDateString('hr-HR',{weekday:'short'});
+      forecast.push({day:dayName,icon:weatherIcon(s),hi:Math.round(hi),lo:Math.round(lo)});
+    }
+  }
+
+  el.innerHTML=`
+    <h3>${name}</h3>
+    <div class="weather-icon">${weatherIcon(sym)}</div>
+    <div class="weather-temp">${temp}°</div>
+    <div class="weather-detail">Vjetar ${wind} km/h</div>
+    <div class="forecast-row">
+      ${forecast.map(f=>`<div class="forecast-day">${f.day}<br>${f.icon}<br><span class="temp">${f.hi}°/${f.lo}°</span></div>`).join('')}
+    </div>`;
+}
+
+async function loadWeather(){
+  for(const city of ['zagreb','rab']){
+    try{
+      const r=await fetch(`data/weather_${city}.json`);
+      const data=await r.json();
+      renderWeather(`weather-${city}`,data);
+    }catch(e){
+      document.getElementById(`weather-${city}`).innerHTML=
+        `<h3>${city==='zagreb'?'Zagreb':'Rab'}</h3><div class="loading">Greska pri ucitavanju</div>`;
+    }
+  }
+}
+loadWeather();
+setInterval(loadWeather,30*60*1000);
+
+// ── Ferry Timetable ──
+const timetable={
+  misnjak:{
+    january:["5:45","6:45","7:45","8:45","11:00","12:00","13:00","15:00","16:00","17:30","19:30","21:30","23:30"],
+    february:["5:45","6:45","7:45","8:45","11:00","12:00","13:00","15:00","16:00","17:30","19:30","21:30","23:30"],
+    march:["5:45","6:45","7:45","8:45","11:00","12:00","13:00","15:00","16:00","17:30","19:30","21:30","23:30"],
+    april:["5:45","6:45","7:45","8:45","11:00","12:00","13:00","15:00","16:00","17:30","19:30","20:30","21:30","23:30"],
+    may:["5:00","5:45","6:45","7:45","8:45","10:30","11:30","12:30","13:30","15:00","16:00","17:00","18:00","19:00","20:00","21:30","23:30"],
+    june:["5:00","5:45","6:45","7:45","8:45","10:30","11:30","12:30","13:30","15:00","16:00","17:00","18:00","19:00","20:00","21:30","23:30"],
+    july:["4:00","5:00","5:45","6:30","7:30","8:30","9:30","10:00","10:30","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","18:30","19:30","20:30","21:30","22:30","23:30"],
+    august:["4:00","5:00","5:45","6:30","7:30","8:30","9:30","10:00","10:30","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","18:30","19:30","20:30","21:30","22:30","23:30"],
+    september:["5:00","5:45","6:45","7:45","8:45","10:30","11:30","12:30","13:30","15:00","16:00","17:00","18:00","19:00","20:00","21:30","23:30"],
+    october:["5:45","6:45","7:45","8:45","11:00","12:00","13:00","15:00","16:00","17:30","19:30","21:30","23:30"],
+    november:["5:45","6:45","7:45","8:45","11:00","12:00","13:00","15:00","16:00","17:30","19:30","21:30","23:30"],
+    december:["5:45","6:45","7:45","8:45","11:00","12:00","13:00","15:00","16:00","17:30","19:30","21:30","23:30"]
+  },
+  stinica:{
+    january:["6:15","7:15","8:15","9:15","10:30","12:30","14:00","15:30","16:30","18:30","20:30","22:00","24:00"],
+    february:["6:15","7:15","8:15","9:15","10:30","12:30","14:00","15:30","16:30","18:30","20:30","22:00","24:00"],
+    march:["6:15","7:15","8:15","9:15","10:30","12:30","14:00","15:30","16:30","18:30","20:30","22:00","24:00"],
+    april:["6:15","7:15","8:15","9:15","10:30","12:30","14:00","15:30","16:30","18:30","20:00","21:00","22:00","24:00"],
+    may:["5:30","6:15","7:15","8:15","9:15","11:00","12:00","13:00","14:00","15:30","16:30","17:30","18:30","19:30","20:30","22:00","24:00"],
+    june:["5:30","6:15","7:15","8:15","9:15","11:00","12:00","13:00","14:00","15:30","16:30","17:30","18:30","19:30","20:30","22:00","24:00"],
+    july:["4:30","5:30","6:15","7:00","8:00","9:00","10:00","10:30","11:00","11:30","12:30","13:30","14:30","15:30","16:30","17:30","18:30","19:00","20:00","21:00","22:00","23:00","24:00"],
+    august:["4:30","5:30","6:15","7:00","8:00","9:00","10:00","10:30","11:00","11:30","12:30","13:30","14:30","15:30","16:30","17:30","18:30","19:00","20:00","21:00","22:00","23:00","24:00"],
+    september:["5:30","6:15","7:15","8:15","9:15","11:00","12:00","13:00","14:00","15:30","16:30","17:30","18:30","19:30","20:30","22:00","24:00"],
+    october:["6:15","7:15","8:15","9:15","10:30","12:30","14:00","15:30","16:30","18:30","20:30","22:00","24:00"],
+    november:["6:15","7:15","8:15","9:15","10:30","12:30","14:00","15:30","16:30","18:30","20:30","22:00","24:00"],
+    december:["6:15","7:15","8:15","9:15","10:30","12:30","14:00","15:30","16:30","18:30","20:30","22:00","24:00"]
+  }
+};
+
+function getMonth(){
+  return['january','february','march','april','may','june',
+    'july','august','september','october','november','december'][new Date().getMonth()];
+}
+
+function timeToMin(s){const[h,m]=s.split(':').map(Number);return h*60+m}
+
+function updateFerry(){
+  const mo=getMonth();
+  const now=new Date();
+  const nowMin=now.getHours()*60+now.getMinutes();
+  const nextS=timetable.stinica[mo].filter(t=>timeToMin(t)>nowMin).slice(0,3);
+  const nextM=timetable.misnjak[mo].filter(t=>timeToMin(t)>nowMin).slice(0,3);
+  const tb=document.querySelector('#ferryNext tbody');
+  tb.innerHTML='';
+  for(let i=0;i<3;i++){
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${nextS[i]||'—'}</td><td>${nextM[i]||'—'}</td>`;
+    tb.appendChild(tr);
+  }
+}
+updateFerry();
+setInterval(updateFerry,60000);
+
+let ferryFullPopulated=false;
+function toggleFerry(){
+  const tbl=document.getElementById('ferryFull');
+  const link=document.querySelector('.ferry-toggle');
+  if(tbl.classList.contains('show')){
+    tbl.classList.remove('show');
+    link.textContent='Cijeli raspored ▾';
+  }else{
+    if(!ferryFullPopulated){
+      const mo=getMonth();
+      const s=timetable.stinica[mo],m=timetable.misnjak[mo];
+      const tb=tbl.querySelector('tbody');
+      for(let i=0;i<Math.max(s.length,m.length);i++){
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${s[i]||'—'}</td><td>${m[i]||'—'}</td>`;
+        tb.appendChild(tr);
+      }
+      ferryFullPopulated=true;
+    }
+    tbl.classList.add('show');
+    link.textContent='Zatvori raspored ▴';
+  }
+}
+
+// ── HAK Road Conditions ──
+async function loadHak(){
+  try{
+    const r=await fetch('data/hak.json');
+    const data=await r.json();
+    if(data.error){throw new Error(data.error)}
+    document.getElementById('hakSummary').textContent=data.summary||'Nema posebnih obavijesti.';
+    if(data.details){
+      document.getElementById('hakDetails').textContent=data.details;
+      document.getElementById('hakToggle').style.display='inline-block';
+    }
+    document.getElementById('hakMeta').innerHTML=
+      `Azurirano: ${data.timestamp||'—'} · <a href="https://hak.hr/info/stanje-na-cestama/" target="_blank">Vidi sve na HAK.hr</a>`;
+  }catch(e){
+    document.getElementById('hakSummary').innerHTML=
+      'Nije moguce ucitati. <a href="https://hak.hr/info/stanje-na-cestama/" target="_blank" style="color:#3498db">Otvori HAK.hr →</a>';
+  }
+}
+loadHak();
+setInterval(loadHak,15*60*1000);
+
+function toggleHak(){
+  const det=document.getElementById('hakDetails');
+  const link=document.getElementById('hakToggle');
+  if(det.classList.contains('show')){
+    det.classList.remove('show');
+    link.textContent='Vise detalja ▾';
+  }else{
+    det.classList.add('show');
+    link.textContent='Zatvori ▴';
+  }
+}
+</script>
+</body>
+</html>

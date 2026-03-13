@@ -49,6 +49,69 @@ body{
   margin-bottom:10px;
 }
 
+/* Tesla */
+.tesla-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tesla-main{text-align:center}
+.battery-bar{
+  width:100%;height:32px;
+  background:#1a1a1a;
+  border:2px solid #333;
+  border-radius:6px;
+  overflow:hidden;
+  position:relative;
+  margin:8px 0;
+}
+.battery-fill{
+  height:100%;
+  background:linear-gradient(90deg,#e74c3c 0%,#f39c12 20%,#2ecc71 40%,#2ecc71 100%);
+  border-radius:4px;
+  transition:width .5s;
+}
+.battery-text{
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  font-size:.85rem;font-weight:700;color:#fff;
+  text-shadow:0 1px 3px rgba(0,0,0,.8);
+}
+.tesla-stat{font-size:.8rem;color:#aaa;margin:4px 0}
+.tesla-stat b{color:#e0e0e0}
+.charge-status{
+  display:inline-block;
+  padding:2px 8px;
+  border-radius:4px;
+  font-size:.75rem;
+  font-weight:700;
+}
+.charge-status.charging{background:#27ae60;color:#fff}
+.charge-status.complete{background:#2c3e50;color:#2ecc71}
+.charge-status.disconnected{background:#2c3e50;color:#888}
+.trips-list{margin-top:8px}
+.trip{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:4px 12px;
+  padding:8px 0;
+  border-bottom:1px solid #2a2a2a;
+  font-size:.8rem;
+}
+.trip:last-child{border-bottom:none}
+.trip-route{color:#ccc}
+.trip-stats{color:#888;text-align:right;font-size:.75rem}
+.trip-bar{
+  grid-column:1/-1;
+  height:4px;
+  background:#1a1a1a;
+  border-radius:2px;
+  overflow:hidden;
+  margin-top:4px;
+}
+.trip-bar-fill{
+  height:100%;
+  background:#3498db;
+  border-radius:2px;
+}
+
 /* Weather grid */
 .weather-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .weather-city{text-align:center}
@@ -180,6 +243,20 @@ body::after{
   <div class="clock">
     <div class="clock-time" id="clock">--:--</div>
     <div class="clock-date" id="date"></div>
+  </div>
+
+  <!-- Tesla -->
+  <div class="section">
+    <div class="section-title">Model 3</div>
+    <div class="tesla-grid">
+      <div class="card tesla-main" id="teslaStatus">
+        <div class="loading">Ucitavanje...</div>
+      </div>
+      <div class="card" id="teslaTrips">
+        <div style="font-size:.8rem;color:#fff;margin-bottom:8px">Zadnje voznje</div>
+        <div class="loading">Ucitavanje...</div>
+      </div>
+    </div>
   </div>
 
   <!-- Weather -->
@@ -465,6 +542,66 @@ function toggleHak(){
     link.textContent='Zatvori ▴';
   }
 }
+
+// ── Tesla Status ──
+async function loadTesla(){
+  try{
+    const r=await fetch('data/tesla.json');
+    const d=await r.json();
+    if(!d.battery_level)throw new Error('no data');
+    const bat=d.battery_level;
+    const range=Math.round(d.battery_range_km);
+    const cs=d.charging_state;
+    let chargeClass='disconnected',chargeText='Odspojeno';
+    if(cs==='Charging'){chargeClass='charging';chargeText='Puni se'+(d.charger_power?' · '+d.charger_power+'kW':'');}
+    else if(cs==='Complete'){chargeClass='complete';chargeText='Napunjeno';}
+    else if(cs==='Stopped'){chargeClass='disconnected';chargeText='Zaustavljeno';}
+    const locked=d.locked?'Zakljucan':'Otkljucan';
+    const odo=d.odometer_km?Math.round(d.odometer_km).toLocaleString():'—';
+    document.getElementById('teslaStatus').innerHTML=`
+      <div class="battery-bar">
+        <div class="battery-fill" style="width:${bat}%"></div>
+        <div class="battery-text">${bat}% · ${range} km</div>
+      </div>
+      <span class="charge-status ${chargeClass}">${chargeText}</span>
+      <div class="tesla-stat">${locked} · ${odo} km</div>
+      <div class="tesla-stat" style="color:#555">${d.timestamp||''}</div>`;
+  }catch(e){
+    document.getElementById('teslaStatus').innerHTML='<div class="loading">Nedostupno</div>';
+  }
+}
+
+async function loadTrips(){
+  try{
+    const r=await fetch('data/tesla_drives.json');
+    const drives=await r.json();
+    if(!drives.length)throw new Error('no drives');
+    const maxE=Math.max(...drives.map(d=>d.energy_kwh||1));
+    const el=document.getElementById('teslaTrips');
+    el.innerHTML='<div style="font-size:.8rem;color:#fff;margin-bottom:8px">Zadnje voznje</div>'+
+      drives.slice(0,5).map(d=>{
+        const date=new Date(d.started_at*1000);
+        const dateStr=date.toLocaleDateString('hr-HR',{day:'numeric',month:'short'});
+        const dist=d.distance_km?d.distance_km.toFixed(1):'?';
+        const kwh=d.energy_kwh?d.energy_kwh.toFixed(1):'?';
+        const pct=((d.energy_kwh||0)/maxE*100).toFixed(0);
+        const from=(d.from||'').split(',')[0];
+        const to=(d.to||'').split(',')[0];
+        return`<div class="trip">
+          <div class="trip-route">${from} → ${to}</div>
+          <div class="trip-stats">${dist} km · ${kwh} kWh</div>
+          <div class="trip-bar"><div class="trip-bar-fill" style="width:${pct}%"></div></div>
+        </div>`;
+      }).join('');
+  }catch(e){
+    document.getElementById('teslaTrips').innerHTML=
+      '<div style="font-size:.8rem;color:#fff;margin-bottom:8px">Zadnje voznje</div><div class="loading">Nedostupno</div>';
+  }
+}
+
+loadTesla();
+loadTrips();
+setInterval(()=>{loadTesla();loadTrips();},15*60*1000);
 </script>
 </body>
 </html>

@@ -108,6 +108,73 @@ def fetch_hak():
         print(f"HAK: FAILED - {e}")
 
 
+def fetch_tesla():
+    """Fetch Tesla vehicle state and recent drives from Tessie API."""
+    api_key = os.environ.get("TESSIE_API_KEY", "")
+    vin = os.environ.get("TESSIE_VIN", "")
+    if not api_key or not vin:
+        print("Tesla: SKIPPED - no TESSIE_API_KEY or TESSIE_VIN env var")
+        return
+
+    headers = {"Authorization": f"Bearer {api_key}"}
+
+    # Vehicle state
+    try:
+        r = requests.get(
+            f"https://api.tessie.com/{vin}/state",
+            headers=headers, timeout=15,
+        )
+        r.raise_for_status()
+        d = r.json()
+        cs = d.get("charge_state", {})
+        vs = d.get("vehicle_state", {})
+        cl = d.get("climate_state", {})
+        result = {
+            "battery_level": cs.get("battery_level"),
+            "battery_range_km": round(cs.get("battery_range", 0) * 1.60934, 1),
+            "charging_state": cs.get("charging_state"),
+            "charge_limit": cs.get("charge_limit_soc"),
+            "charger_power": cs.get("charger_power"),
+            "locked": vs.get("locked"),
+            "odometer_km": round(vs.get("odometer", 0) * 1.60934, 1),
+            "inside_temp": cl.get("inside_temp"),
+            "outside_temp": cl.get("outside_temp"),
+            "sentry_mode": vs.get("sentry_mode"),
+            "timestamp": datetime.now().strftime("%H:%M, %d.%m.%Y."),
+        }
+        with open(os.path.join(DATA_DIR, "tesla.json"), "w") as f:
+            json.dump(result, f, ensure_ascii=False, separators=(",", ":"))
+        print("Tesla state: OK")
+    except Exception as e:
+        print(f"Tesla state: FAILED - {e}")
+
+    # Recent drives
+    try:
+        r = requests.get(
+            f"https://api.tessie.com/{vin}/drives?limit=5",
+            headers=headers, timeout=15,
+        )
+        r.raise_for_status()
+        d = r.json()
+        drives = []
+        for trip in d.get("results", []):
+            drives.append({
+                "started_at": trip.get("started_at"),
+                "from": trip.get("starting_location", ""),
+                "to": trip.get("ending_location", ""),
+                "distance_km": round(trip.get("odometer_distance", 0) * 1.60934, 1),
+                "energy_kwh": trip.get("energy_used"),
+                "start_bat": trip.get("starting_battery"),
+                "end_bat": trip.get("ending_battery"),
+            })
+        with open(os.path.join(DATA_DIR, "tesla_drives.json"), "w") as f:
+            json.dump(drives, f, ensure_ascii=False, separators=(",", ":"))
+        print("Tesla drives: OK")
+    except Exception as e:
+        print(f"Tesla drives: FAILED - {e}")
+
+
 if __name__ == "__main__":
     fetch_weather()
     fetch_hak()
+    fetch_tesla()

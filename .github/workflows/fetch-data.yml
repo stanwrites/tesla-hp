@@ -23,7 +23,10 @@ jobs:
       - name: Install dependencies
         run: pip install requests beautifulsoup4
 
-      - name: Fetch weather and road data
+      - name: Fetch weather, road, and Tesla data
+        env:
+          TESSIE_API_KEY: ${{ secrets.TESSIE_API_KEY }}
+          TESSIE_VIN: ${{ secrets.TESSIE_VIN }}
         run: python fetch_data.py
 
       - name: Commit updated data

@@ -1,1 +1,1 @@
-{"battery_level":43,"battery_range_km":206.3,"charging_state":"Stopped","charge_limit":80,"charger_power":0,"locked":true,"odometer_km":89635.1,"inside_temp":17.8,"outside_temp":8.5,"sentry_mode":false,"timestamp":"10:14, 05.11.2026."}
+{"battery_level":62,"battery_range_km":300.8,"charging_state":"Charging","charge_limit":80,"charger_power":2,"locked":true,"odometer_km":89635.1,"inside_temp":14,"outside_temp":10.5,"sentry_mode":true,"timestamp":"18:03, 05.11.2026."}
